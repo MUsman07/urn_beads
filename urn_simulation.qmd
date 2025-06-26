@@ -1,0 +1,14 @@
+---
+title: "Proportion of red beads"
+format: html
+execute: 
+  echo: false
+---
+
+The relationship between physical characteristics and categorical outcomes is a common focus in data analysis, especially when trying to understand how measurable traits influence observable results. In this project, we use simulated data of 1,000 beads to explore whether a bead’s size can help predict its color.
+
+
+```{r}
+#| message: false
+library(tidyverse)
+```
