@@ -5,10 +5,91 @@ execute:
   echo: false
 ---
 
-The relationship between physical characteristics and categorical outcomes is a common focus in data analysis, especially when trying to understand how measurable traits influence observable results. In this project, we use simulated data of 1,000 beads to explore whether a bead’s size can help predict its color.
+The relationship between physical characteristics and categorical outcomes is a common focus in data analysis, especially when trying to understand how measurable traits influence observable results. In this project, we use simulated data of 1,000 beads to explore whether a bead’s size can help predict its color.One potential weakness in our model is that the sampling process may not be stable across trials, meaning that changes in how samples are drawn could affect the reliability of our results.
+
+$$
+P(Y = 1) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_n X_n)}}, \quad Y \sim \text{Bernoulli}(\rho)
+$$
+
+$$
+\hat{P}(\text{color} = \text{red}) = \frac{1}{1 + e^{-(-0.4055)}}
+$$
+
 
 
 ```{r}
 #| message: false
 library(tidyverse)
+library(tidymodels)
+library(broom)
 ```
+
+
+```{r}
+#| cache: true
+
+set.seed(10)
+
+urn <- tibble(
+  color = factor(c(rep("red", 400), rep("white", 600)))  # make color a factor
+)
+
+shovel <- slice_sample(urn, n = 50)
+
+fit_color <- logistic_reg(engine = "glm") |>
+  fit(color ~ 1, data = shovel) 
+fit_color1 <- fit_color
+fit_color <- fit_color |> tidy(conf.int = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(gt)
+
+fit_color |> 
+  select(term, estimate, conf.low, conf.high) |> 
+  gt() |> 
+  fmt_number(
+    columns = c(estimate, conf.low, conf.high),
+    decimals = 3
+  ) |> 
+  cols_label(
+    term = "Term",
+    estimate = "Estimate",
+    conf.low = "Lower 95% CI",
+    conf.high = "Upper 95% CI"
+  ) |> 
+  tab_header(
+    title = "Logistic Regression Results"
+  )
+
+```
+We model the probability that a bead is red, a binary outcome indicating bead color, as a logistic function of a constant (intercept only), without including any additional covariates.
+
+
+```{r}
+library(marginaleffects)
+library(ggplot2)
+
+# Create and customize the plot
+plot_predictions(fit_color1, type = "prob", condition = "group") +
+  labs(
+    title = "Estimated Probability of Drawing a Red or White Bead",
+    subtitle = "Model predicts red beads make up about 34% of scooped samples, with moderate uncertainty",
+    caption = "Data source: Simulated sample of 50 beads from an urn of 1,000 (400 red, 600 white)",
+    x = "Bead Color",
+    y = "Estimated Probability"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(margin = margin(b = 10)),
+    plot.caption = element_text(size = 10, face = "italic")
+  )
+
+```
+
+We estimate that approximately 34% of the beads are red, with a 95% confidence interval ranging from 21% to 47%, reflecting the uncertainty due to sampling variation.
+
+The estimates for the quantities of interest might be wrong if the sample of beads we drew was not representative of the entire urn — for example, if red beads were unevenly distributed or more difficult to scoop. Additionally, random variation in a small sample (like 50 beads) can lead to over- or underestimation of the true proportion. If our sampling process was biased or if the data-generating process changed, the true proportion of red beads could differ from our estimate. An alternative estimate, based on the known urn composition (400 red out of 1,000), would be 40%, with a narrower confidence interval due to the full data being known rather than estimated from a sample.
